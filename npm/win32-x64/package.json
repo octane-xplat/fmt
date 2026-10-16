@@ -10,7 +10,9 @@
 	],
 	"main": "octane-fmt.win32-x64.node",
 	"files": [
-		"octane-fmt.win32-x64.node"
+		"octane-fmt.win32-x64.node",
+		"README.md",
+		"LICENSE"
 	],
 	"repository": {
 		"type": "git",

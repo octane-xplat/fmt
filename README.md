@@ -85,6 +85,9 @@ arm64/x64 (glibc and musl), and Windows arm64/x64. Consumers need no Rust
 toolchain and no postinstall download.
 
 Development: `pnpm build` compiles the host binary under `crates/node/`.
+Pushing a `v*` tag matching `package.json` runs the release workflow: it
+builds all eight targets, publishes the `fmt-<platform>` packages first, then
+the main package — consumers can only resolve a release whose engines exist.
 `pnpm test` runs the Node suite; `pnpm test:packed` packs and exercises the
 artifact in a clean consumer. `cargo fmt --check`, `cargo clippy
 -- -D warnings`, and `cargo test` cover the Rust side.

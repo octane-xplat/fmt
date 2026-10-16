@@ -10,7 +10,9 @@
 	],
 	"main": "octane-fmt.darwin-arm64.node",
 	"files": [
-		"octane-fmt.darwin-arm64.node"
+		"octane-fmt.darwin-arm64.node",
+		"README.md",
+		"LICENSE"
 	],
 	"repository": {
 		"type": "git",

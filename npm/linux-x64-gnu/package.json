@@ -10,7 +10,9 @@
 	],
 	"main": "octane-fmt.linux-x64-gnu.node",
 	"files": [
-		"octane-fmt.linux-x64-gnu.node"
+		"octane-fmt.linux-x64-gnu.node",
+		"README.md",
+		"LICENSE"
 	],
 	"repository": {
 		"type": "git",

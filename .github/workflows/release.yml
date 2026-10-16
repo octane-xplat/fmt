@@ -43,11 +43,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec napi build --release -p octane-fmt-node --target ${{ matrix.target }}
       - name: stage platform package
-        run: cp "crates/node/octane-fmt.${{ matrix.pkg }}.node" "npm/${{ matrix.pkg }}/"
+        # napi emits e.g. octane-fmt.win32-x64-msvc.node; normalize to the
+        # name the package manifest and loader expect.
+        shell: bash
+        run: cp crates/node/octane-fmt.*.node "npm/${{ matrix.pkg }}/octane-fmt.${{ matrix.pkg }}.node"
       - uses: actions/upload-artifact@v4
         with:
           name: fmt-${{ matrix.pkg }}
-          path: npm/${{ matrix.pkg }}/
+          # Upload the npm/ subtree — only this job's pkg dir exists here,
+          # so the artifact carries npm/<pkg>/… paths for the merge below.
+          path: npm/
 
   publish:
     needs: build
@@ -66,13 +71,18 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: fmt-*
+          path: npm
           merge-multiple: true
+      - name: tag must match package version
+        run: |
+          test "v$(node -p 'require("./package.json").version')" = "${{ github.ref_name }}" || \
+            { echo "tag ${{ github.ref_name }} != package version $(node -p 'require("./package.json").version')"; exit 1; }
       # Artifacts land merged at npm/<pkg>/… because each uploaded its dir.
       - run: pnpm install --frozen-lockfile
       - name: publish platform packages
         run: |
           for dir in npm/*/; do
-            (cd "$dir" && pnpm publish --access public --no-git-checks)
+            (cd "$dir" && pnpm publish --access public --provenance --no-git-checks)
           done
       - name: publish main package
-        run: pnpm publish --access public --no-git-checks
+        run: pnpm publish --access public --provenance --no-git-checks

@@ -3,6 +3,7 @@
 // crates/node/ during development, or an explicit OCTANE_FMT_NATIVE path.
 // Formatting never spawns oxlint/oxfmt/node/rustc: the engine runs in-process.
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
 
@@ -41,8 +42,8 @@ function candidates() {
 	const key = hostKey()
 	const list = []
 	if (process.env.OCTANE_FMT_NATIVE) list.push(process.env.OCTANE_FMT_NATIVE)
-	list.push(new URL(`../octane-fmt.${key}.node`, import.meta.url).pathname)
-	list.push(new URL(`../crates/node/octane-fmt.${key}.node`, import.meta.url).pathname)
+	list.push(fileURLToPath(new URL(`../octane-fmt.${key}.node`, import.meta.url)))
+	list.push(fileURLToPath(new URL(`../crates/node/octane-fmt.${key}.node`, import.meta.url)))
 	const pkg = PLATFORM_PACKAGES[key]
 	if (pkg) list.push(pkg)
 	return { key, list }
