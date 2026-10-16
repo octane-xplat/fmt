@@ -73,7 +73,7 @@ fn malformed_source_fails_without_output() {
     let Err(diagnostics) = result else {
         panic!("must fail")
     };
-    assert!(!diagnostics.is_empty());
+    assert_ne!(diagnostics, [] as [octane_fmt_core::Diagnostic; 0]);
     eprintln!("{diagnostics:?}");
 }
 
