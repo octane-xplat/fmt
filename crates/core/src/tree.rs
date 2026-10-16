@@ -289,7 +289,7 @@ fn collect_tsrx(path: &Path, source: &str) -> Result<Vec<Container>, Vec<Diagnos
             let render_start = if node_type == "JSXCodeBlock" {
                 field_value(tape, object, "render")
                     .and_then(|value| object_start(tape, value))
-                    .and_then(&to_byte)
+                    .and_then(to_byte)
             } else {
                 None
             };
