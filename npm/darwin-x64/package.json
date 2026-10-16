@@ -1,0 +1,31 @@
+{
+	"name": "@octane-xplat/fmt-darwin-x64",
+	"version": "0.1.0",
+	"license": "MIT",
+	"os": [
+		"darwin"
+	],
+	"cpu": [
+		"x64"
+	],
+	"main": "octane-fmt.darwin-x64.node",
+	"files": [
+		"octane-fmt.darwin-x64.node"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/octane-xplat/fmt"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"napi": {
+		"name": "octane-fmt.darwin-x64",
+		"triples": {
+			"defaults": false,
+			"additional": [
+				"x86_64-apple-darwin"
+			]
+		}
+	}
+}

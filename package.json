@@ -34,12 +34,26 @@
   "scripts": {
     "build": "napi build --platform --release",
     "build:debug": "napi build --platform",
-    "typecheck": "tsc --noEmit src/index.d.ts tests/types.test-d.ts 2>/dev/null || tsc --noEmit src/index.d.ts",
+    "typecheck": "tsc --noEmit --strict --allowJs --checkJs false src/index.d.ts",
     "test": "node --test tests/",
     "test:packed": "node scripts/test-packed.mjs"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.4.0"
+    "@napi-rs/cli": "^3.4.0",
+    "typescript": "^5.9.0"
   },
-  "optionalDependencies": {}
+  "optionalDependencies": {
+    "@octane-xplat/fmt-darwin-arm64": "0.1.0",
+    "@octane-xplat/fmt-darwin-x64": "0.1.0",
+    "@octane-xplat/fmt-linux-arm64-gnu": "0.1.0",
+    "@octane-xplat/fmt-linux-x64-gnu": "0.1.0",
+    "@octane-xplat/fmt-linux-arm64-musl": "0.1.0",
+    "@octane-xplat/fmt-linux-x64-musl": "0.1.0",
+    "@octane-xplat/fmt-win32-arm64": "0.1.0",
+    "@octane-xplat/fmt-win32-x64": "0.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/octane-xplat/fmt"
+  }
 }

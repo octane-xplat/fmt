@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { execFile } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
@@ -170,4 +171,31 @@ test('concurrent calls are deterministic', async () => {
 	)
 	const codes = new Set(results.map((r) => r.ok && r.code))
 	assert.equal(codes.size, 1)
+})
+
+test('formatting spawns no child processes', async () => {
+	const childCount = () =>
+		new Promise((resolveCount) => {
+			execFile('ps', ['-axo', 'pid,ppid'], (error, stdout) => {
+				if (error) return resolveCount(-1) // platform without BSD ps — skip
+				resolveCount(
+					stdout
+						.trim()
+						.split('\n')
+						.filter((line) => Number(line.trim().split(/\s+/)[1]) === process.pid)
+						.length,
+				)
+			})
+		})
+	const before = await childCount()
+	if (before === -1) return
+	const fmt = await engine()
+	for (let i = 0; i < 20; i++) {
+		const result = await fmt.formatText({
+			path: `p${i}.ts`,
+			source: await fixture('basic.in.ts'),
+		})
+		assert.equal(result.ok, true)
+	}
+	assert.equal(await childCount(), before)
 })

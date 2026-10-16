@@ -1,0 +1,31 @@
+{
+	"name": "@octane-xplat/fmt-linux-x64-musl",
+	"version": "0.1.0",
+	"license": "MIT",
+	"os": [
+		"linux"
+	],
+	"cpu": [
+		"x64"
+	],
+	"main": "octane-fmt.linux-x64-musl.node",
+	"files": [
+		"octane-fmt.linux-x64-musl.node"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/octane-xplat/fmt"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"napi": {
+		"name": "octane-fmt.linux-x64-musl",
+		"triples": {
+			"defaults": false,
+			"additional": [
+				"x86_64-unknown-linux-musl"
+			]
+		}
+	}
+}

@@ -88,3 +88,12 @@ Development: `pnpm build` compiles the host binary under `crates/node/`.
 `pnpm test` runs the Node suite; `pnpm test:packed` packs and exercises the
 artifact in a clean consumer. `cargo fmt --check`, `cargo clippy
 -- -D warnings`, and `cargo test` cover the Rust side.
+
+## Performance
+
+Measured 2026-10-16 on macOS arm64 (Apple Silicon), Node 26, rustc 1.98.1:
+`xplat fmt --check packages/ui` in the octane-xplat repository — 945
+JS/TS/TSRX sources, all three pipeline phases per file — runs in ~1.0s wall
+cold and warm (work is CPU-bound in process; there is no cache between runs
+yet). Lint-parse + format + spacing run without any child process — the Node
+suite asserts a stable child-process count across a batch.
