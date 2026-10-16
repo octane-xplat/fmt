@@ -4,6 +4,7 @@
   "description": "Octane Xplat formatter: safe Oxlint fixes + Oxfmt + Xplat spacing, in-process",
   "license": "MIT",
   "type": "module",
+  "packageManager": "pnpm@12.8.1",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
   "exports": {
