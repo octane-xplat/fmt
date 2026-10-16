@@ -10,9 +10,7 @@
 	],
 	"main": "octane-fmt.linux-arm64-musl.node",
 	"files": [
-		"octane-fmt.linux-arm64-musl.node",
-		"README.md",
-		"LICENSE"
+		"octane-fmt.linux-arm64-musl.node"
 	],
 	"repository": {
 		"type": "git",
@@ -29,5 +27,8 @@
 				"aarch64-unknown-linux-musl"
 			]
 		}
-	}
+	},
+	"libc": [
+		"musl"
+	]
 }

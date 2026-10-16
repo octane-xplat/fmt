@@ -10,9 +10,7 @@
 	],
 	"main": "octane-fmt.linux-arm64-gnu.node",
 	"files": [
-		"octane-fmt.linux-arm64-gnu.node",
-		"README.md",
-		"LICENSE"
+		"octane-fmt.linux-arm64-gnu.node"
 	],
 	"repository": {
 		"type": "git",
@@ -29,5 +27,8 @@
 				"aarch64-unknown-linux-gnu"
 			]
 		}
-	}
+	},
+	"libc": [
+		"glibc"
+	]
 }
