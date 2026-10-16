@@ -1,0 +1,45 @@
+{
+  "name": "@octane-xplat/fmt",
+  "version": "0.1.0",
+  "description": "Octane Xplat formatter: safe Oxlint fixes + Oxfmt + Xplat spacing, in-process",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src/",
+    "*.node"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "napi": {
+    "binaryName": "octane-fmt",
+    "triples": {
+      "additional": [
+        "aarch64-pc-windows-msvc",
+        "x86_64-pc-windows-msvc",
+        "aarch64-apple-darwin",
+        "x86_64-apple-darwin",
+        "aarch64-unknown-linux-gnu",
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-musl",
+        "x86_64-unknown-linux-musl"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "typecheck": "tsc --noEmit src/index.d.ts tests/types.test-d.ts 2>/dev/null || tsc --noEmit src/index.d.ts",
+    "test": "node --test tests/",
+    "test:packed": "node scripts/test-packed.mjs"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.4.0"
+  },
+  "optionalDependencies": {}
+}

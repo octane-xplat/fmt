@@ -1,0 +1,21 @@
+[package]
+name = "octane-fmt-node"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "3", features = ["napi8", "serde-json"] }
+napi-derive = "3"
+octane-fmt-core = { path = "../core" }
+serde_json = "1.0.145"
+
+[build-dependencies]
+napi-build = "2"
+
+[lints]
+workspace = true
