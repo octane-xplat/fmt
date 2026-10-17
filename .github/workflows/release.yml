@@ -50,7 +50,7 @@ jobs:
         # napi emits e.g. octane-fmt.win32-x64-msvc.node; normalize to the
         # name the package manifest and loader expect.
         shell: bash
-        run: cp crates/node/octane-fmt.*.node "npm/${{ matrix.pkg }}/octane-fmt.${{ matrix.pkg }}.node"
+        run: cp crates/node/octane-fmt.node "npm/${{ matrix.pkg }}/octane-fmt.${{ matrix.pkg }}.node"
       - uses: actions/upload-artifact@v4
         with:
           name: fmt-${{ matrix.pkg }}
