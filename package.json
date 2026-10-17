@@ -20,22 +20,20 @@
   },
   "napi": {
     "binaryName": "octane-fmt",
-    "triples": {
-      "additional": [
-        "aarch64-pc-windows-msvc",
-        "x86_64-pc-windows-msvc",
-        "aarch64-apple-darwin",
-        "x86_64-apple-darwin",
-        "aarch64-unknown-linux-gnu",
-        "x86_64-unknown-linux-gnu",
-        "aarch64-unknown-linux-musl",
-        "x86_64-unknown-linux-musl"
-      ]
-    }
+    "targets": [
+      "aarch64-pc-windows-msvc",
+      "x86_64-pc-windows-msvc",
+      "aarch64-apple-darwin",
+      "x86_64-apple-darwin",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-musl",
+      "x86_64-unknown-linux-musl"
+    ]
   },
   "scripts": {
-    "build": "napi build --platform --release",
-    "build:debug": "napi build --platform",
+    "build": "napi build --platform --release -p octane-fmt-node",
+    "build:debug": "napi build --platform -p octane-fmt-node",
     "typecheck": "tsc --noEmit --strict --allowJs --checkJs false src/index.d.ts",
     "test": "node --test tests/",
     "test:packed": "node scripts/test-packed.mjs"

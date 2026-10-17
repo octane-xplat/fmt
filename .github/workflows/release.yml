@@ -20,11 +20,11 @@ jobs:
           - { os: ubuntu-latest, target: x86_64-unknown-linux-musl, pkg: linux-x64-musl }
           - { os: ubuntu-latest, target: aarch64-unknown-linux-musl, pkg: linux-arm64-musl }
           - { os: windows-latest, target: x86_64-pc-windows-msvc, pkg: win32-x64 }
-          - { os: windows-latest, target: arm64-pc-windows-msvc, pkg: win32-arm64 }
+          - { os: windows-latest, target: aarch64-pc-windows-msvc, pkg: win32-arm64 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.99
+      - uses: dtolnay/rust-toolchain@1.99.1
         with:
           targets: ${{ matrix.target }}
       - if: runner.os == 'Linux' && contains(matrix.target, 'musl')
@@ -34,7 +34,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
           echo 'CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc' >> "$GITHUB_ENV"
-          echo 'CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc' >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
