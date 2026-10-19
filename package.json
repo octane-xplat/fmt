@@ -1,6 +1,6 @@
 {
   "name": "@octane-xplat/fmt",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Octane Xplat formatter: safe Oxlint fixes + Oxfmt + Xplat spacing, in-process",
   "license": "MIT",
   "type": "module",
@@ -43,14 +43,14 @@
     "typescript": "^5.9.0"
   },
   "optionalDependencies": {
-    "@octane-xplat/fmt-darwin-arm64": "0.1.0",
-    "@octane-xplat/fmt-darwin-x64": "0.1.0",
-    "@octane-xplat/fmt-linux-arm64-gnu": "0.1.0",
-    "@octane-xplat/fmt-linux-x64-gnu": "0.1.0",
-    "@octane-xplat/fmt-linux-arm64-musl": "0.1.0",
-    "@octane-xplat/fmt-linux-x64-musl": "0.1.0",
-    "@octane-xplat/fmt-win32-arm64": "0.1.0",
-    "@octane-xplat/fmt-win32-x64": "0.1.0"
+    "@octane-xplat/fmt-darwin-arm64": "0.1.1",
+    "@octane-xplat/fmt-darwin-x64": "0.1.1",
+    "@octane-xplat/fmt-linux-arm64-gnu": "0.1.1",
+    "@octane-xplat/fmt-linux-x64-gnu": "0.1.1",
+    "@octane-xplat/fmt-linux-arm64-musl": "0.1.1",
+    "@octane-xplat/fmt-linux-x64-musl": "0.1.1",
+    "@octane-xplat/fmt-win32-arm64": "0.1.1",
+    "@octane-xplat/fmt-win32-x64": "0.1.1"
   },
   "repository": {
     "type": "git",
