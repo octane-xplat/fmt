@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["crates/core", "crates/node"]
+exclude = ["vendor/oxc_adapter"]
 
 [workspace.package]
 version = "0.1.0"
@@ -15,3 +16,7 @@ pedantic = { level = "warn", priority = -1 }
 [profile.release]
 lto = "thin"
 codegen-units = 1
+
+# Preserve declaration-file mode across the pinned adapter’s lint/format reparses.
+[patch."https://github.com/tsrx-org/oxc"]
+oxc_adapter = { path = "vendor/oxc_adapter" }

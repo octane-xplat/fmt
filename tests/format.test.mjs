@@ -26,6 +26,55 @@ test('ordinary TS: lint fix + format + spacing in one call', async () => {
 	assert.ok(!result.code.includes(';'), result.code) // blessed semi:false
 })
 
+for (const extension of ['d.ts', 'd.mts', 'd.cts']) {
+	test(`${extension}: ambient exports format and remain stable`, async () => {
+		const fmt = await engine()
+		const path = `types/contracts/repro.${extension}`
+		for (const source of [
+			'export const value: string',
+			'export const contract:{\nvalue:string;count:number\n}\nexport function read():string',
+			'export declare const explicit: string',
+		]) {
+			const first = await fmt.formatText({ path, source })
+			assert.equal(first.ok, true, JSON.stringify(first.diagnostics))
+			assert.equal(first.changed, true)
+			assert.ok(first.code.endsWith('\n'))
+			if (source === 'export const value: string') {
+				assert.equal(first.code, 'export const value: string\n')
+			}
+			if (source.includes('contract:')) {
+				assert.equal(first.code, 'export const contract: {\n\tvalue: string\n\tcount: number\n}\n\nexport function read(): string\n')
+			}
+			const second = await fmt.formatText({ path, source: first.code })
+			assert.equal(second.ok, true, JSON.stringify(second.diagnostics))
+			assert.equal(second.code, first.code)
+			assert.equal(second.changed, false)
+		}
+	})
+}
+
+for (const extension of ['ts', 'mts', 'cts']) {
+	test(`${extension}: ordinary const declarations still require initializers`, async () => {
+		const fmt = await engine()
+		const result = await fmt.formatText({
+			path: `repro.${extension}`,
+			source: 'export const value: string',
+		})
+		assert.equal(result.ok, false)
+		assert.ok(result.diagnostics.some((diagnostic) =>
+			diagnostic.stage === 'parse' &&
+			diagnostic.code === 'OXC_PARSE' &&
+			diagnostic.message.includes('Missing initializer in const declaration')))
+
+		const valid = await fmt.formatText({
+			path: `valid.${extension}`,
+			source: 'export const value:string="ok"',
+		})
+		assert.equal(valid.ok, true, JSON.stringify(valid.diagnostics))
+		assert.equal(valid.code, "export const value: string = 'ok'\n")
+	})
+}
+
 test('TSRX: implicit render gets a separating blank line', async () => {
 	const fmt = await engine()
 	const source = await fixture('tsrx.in.tsrx')

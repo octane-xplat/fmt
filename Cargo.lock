@@ -923,7 +923,6 @@ dependencies = [
 [[package]]
 name = "oxc_adapter"
 version = "0.21.0"
-source = "git+https://github.com/tsrx-org/oxc?rev=96b581c8d334e0c8636aac8a947536c5f82c8684#96b581c8d334e0c8636aac8a947536c5f82c8684"
 dependencies = [
  "oxc_allocator",
  "oxc_ast",

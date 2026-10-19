@@ -94,3 +94,46 @@ fn unicode_source_keeps_correct_spans() {
         .unwrap();
     assert_eq!(second.code, outcome.code);
 }
+
+#[test]
+fn declaration_mode_survives_safe_fix_validation_and_format_drift_reparse() {
+    let directory = std::env::temp_dir().join("octane-fmt-declaration-fixes");
+    std::fs::create_dir_all(&directory).unwrap();
+    std::fs::write(
+        directory.join(".oxlintrc.json"),
+        r#"{ "rules": { "no-var": "error" } }"#,
+    )
+    .unwrap();
+    let engine = engine(&directory);
+
+    for extension in ["d.ts", "d.mts", "d.cts"] {
+        let filename = format!("contracts/repro.{extension}");
+        let path = Path::new(&filename);
+        let source = "export var mutable: string\nexport const contract: {\nvalue: string\n}";
+        let first = engine
+            .format_text(path, source)
+            .expect("formats declaration");
+        assert!(
+            first.code.contains("export let mutable: string"),
+            "{}",
+            first.code
+        );
+        assert!(
+            first.code.contains("export const contract:"),
+            "{}",
+            first.code
+        );
+        // The drift probe must be able to parse the same ambient output too.
+        let kind = oxc_adapter::SourceKind::from_path(path).unwrap();
+        assert_eq!(
+            oxc_adapter::count_expanded_objects(&first.code, kind, false).unwrap(),
+            1
+        );
+        let second = engine
+            .format_text(path, &first.code)
+            .expect("reformats declaration");
+        assert_eq!(second.code, first.code);
+        assert!(!second.changed);
+    }
+    std::fs::remove_dir_all(directory).unwrap();
+}
