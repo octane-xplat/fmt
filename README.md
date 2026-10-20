@@ -79,7 +79,7 @@ package; keep your existing tooling for them.
 ## Native builds
 
 The engine is a Node-API (napi-rs) addon over the pinned `tsrx-org/oxc`
-revision `96b581c8d334e0c8636aac8a947536c5f82c8684`. Published platform
+revision `5487f8f11625dbfa8f62e7f17ab22cfe44d18600`. Published platform
 packages are named `@octane-xplat/fmt-<platform>` for macOS arm64/x64, Linux
 arm64/x64 (glibc and musl), and Windows arm64/x64. Consumers need no Rust
 toolchain and no postinstall download.

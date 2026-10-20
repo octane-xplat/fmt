@@ -61,10 +61,12 @@ not currently automatic formatting fixes.
 
 ## 2. Evidence and upstream boundaries
 
-Start from `tsrx-org/oxc` revision
-`96b581c8d334e0c8636aac8a947536c5f82c8684`, resolved on 2026-10-16. Pin the
-chosen revision in Cargo dependencies and commit `Cargo.lock`. If adopting a
-different revision, rerun the feasibility checks and update the recorded pin.
+The current dependency pin is `tsrx-org/oxc` revision
+`5487f8f11625dbfa8f62e7f17ab22cfe44d18600` (0.22.0, resolved on 2026-10-20).
+It includes the upstream declaration-file parsing fix. The source links below
+retain the 2026-10-16 feasibility-check baseline at
+`96b581c8d334e0c8636aac8a947536c5f82c8684` for provenance. Keep the active
+revision in Cargo dependencies and commit `Cargo.lock` when changing it.
 
 | Source                                                                                                                                       | What implementers should inspect                                      |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
