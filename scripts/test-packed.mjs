@@ -34,6 +34,12 @@ try {
     const result = await fmt.formatText({ path: 'demo.tsrx', source: 'export function V() @{ const x = 1; <p>{x}</p> }' })
     if (!result.ok) { console.error(result.diagnostics); process.exit(1) }
     console.log(result.code)
+    for (const [path, source] of [['theme.css', 'a{color:red}'], ['README', '# Hello\\n\\nhello   world'], ['a.json', '{"x":1}']]) {
+      const first = await fmt.formatText({ path, source })
+      if (!first.ok || !first.changed) { console.error(path, first); process.exit(1) }
+      const second = await fmt.formatText({ path, source: first.code })
+      if (!second.ok || second.changed) { console.error(path, second); process.exit(1) }
+    }
     for (const extension of ['d.ts', 'd.mts', 'd.cts']) {
       const path = 'contracts/repro.' + extension
       const first = await fmt.formatText({ path, source: 'export const value: string' })

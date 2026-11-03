@@ -26,7 +26,7 @@ use std::{
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use oxc_adapter::FormatOptions;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::diagnostic::EngineError;
@@ -188,6 +188,7 @@ pub fn build_lint_config_source(
 #[derive(Debug, Clone, Default)]
 pub struct FileFormatOptions {
     pub engine: FormatOptions,
+    pub raw: Map<String, Value>,
     pub insert_final_newline: Option<bool>,
 }
 
@@ -195,6 +196,7 @@ impl FileFormatOptions {
     /// Merges `other` over `self`, exactly like upstream `FileFormatOptions::merge`:
     /// only fields the other side actually sets win.
     pub fn merge(&mut self, other: &Self) {
+        self.raw.extend(other.raw.clone());
         macro_rules! merge {
             ($($field:ident),+ $(,)?) => {
                 $(if other.engine.$field.is_some() {
@@ -240,6 +242,7 @@ pub struct FormatConfig {
     base: FileFormatOptions,
     overrides: Vec<FormatOverride>,
     ignore: Option<Gitignore>,
+    caller: FileFormatOptions,
 }
 
 impl FormatConfig {
@@ -289,12 +292,13 @@ impl FormatConfig {
             config_root = path.parent().unwrap_or(&cwd).to_path_buf();
         }
 
+        let mut caller_resolved = FileFormatOptions::default();
         if let Some(caller) = caller_options {
             let raw: RawFormatOptions =
                 serde_json::from_value(caller.clone()).map_err(|error| {
                     EngineError::Config(format!("Invalid caller format options: {error}"))
                 })?;
-            base.merge(&resolve_options(raw, Path::new("<options>"))?);
+            caller_resolved = resolve_options(raw, Path::new("<options>"))?;
         }
 
         let ignore = build_ignore(&config_root, &ignore_patterns)?;
@@ -303,6 +307,7 @@ impl FormatConfig {
             base,
             overrides,
             ignore,
+            caller: caller_resolved,
         })
     }
 
@@ -325,6 +330,7 @@ impl FormatConfig {
                 options.merge(&entry.options);
             }
         }
+        options.merge(&self.caller);
         options
     }
 
@@ -377,7 +383,7 @@ struct RawFormatOverride {
 
 /// One option block, kept as typed fields so unknown keys are refused like
 /// upstream `FormatError::UnknownOption`.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 struct RawFormatOptions {
     #[serde(rename = "$schema")]
@@ -414,6 +420,10 @@ struct RawFormatOptions {
 }
 
 fn resolve_options(raw: RawFormatOptions, path: &Path) -> Result<FileFormatOptions, EngineError> {
+    let raw_value =
+        serde_json::to_value(&raw).map_err(|error| EngineError::Config(error.to_string()))?;
+    let mut raw_options = raw_value.as_object().cloned().unwrap_or_default();
+    raw_options.retain(|key, value| !value.is_null() && key != "unknown" && key != "$schema");
     let at = path.display();
     if let Some((option, _)) = raw.unknown.into_iter().next() {
         return Err(EngineError::Config(format!(
@@ -440,6 +450,7 @@ fn resolve_options(raw: RawFormatOptions, path: &Path) -> Result<FileFormatOptio
     }
 
     let mut options = FileFormatOptions {
+        raw: raw_options,
         engine: FormatOptions {
             use_tabs: raw.use_tabs,
             tab_width: raw.tab_width,

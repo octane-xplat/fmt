@@ -2,7 +2,9 @@
 
 The Octane Xplat formatter: one in-process pipeline that applies selected safe
 Oxlint fixes, canonical Oxfmt, and the framework's statement-spacing rule to
-JS/TS/JSX/TSX and `.tsrx` source. Everything runs in the host Node process —
+JS/TS/JSX/TSX and `.tsrx` source. All other Oxfmt file types pass through
+the pinned Oxfmt Node API, without Octane lint fixes or statement spacing.
+Everything runs in the host Node process (including Oxfmt worker threads) —
 no `oxlint`/`oxfmt` binaries, no Node subprocesses, no Rust executables.
 
 ```ts
@@ -22,7 +24,7 @@ if (result.ok) {
 (TSX vs TSRX) and per-file configuration overrides. File discovery,
 stdin/stdout plumbing, and writes belong to the `xplat fmt` command.
 
-## What it does per file
+## What it does per JS/TS/TSRX file
 
 1. Collects *safe* fixes for the rules in the registry below, applies a
    deterministic non-overlapping subset, and recomputes until the lint phase
@@ -72,9 +74,30 @@ fixes inside the engine.
 
 ## Coverage
 
-Formats `.js`, `.mjs`, `.cjs`, `.jsx`, `.ts`, `.mts`, `.cts`, `.tsx`, and
-`.tsrx`. JSON/JSONC, CSS, Markdown, and YAML are **not** covered by this
-package; keep your existing tooling for them.
+Coverage follows Oxfmt **0.70.0**, plus `.tsrx`: JavaScript/TypeScript,
+JSON/JSONC/JSON5, CSS/SCSS/Less, GraphQL, YAML, TOML, Markdown/MDX,
+HTML/Angular, Vue, Svelte (requires `svelte: {}` configuration and the upstream
+Svelte peer dependency), MJML, and Handlebars. Oxfmt's additional JavaScript
+extensions, language aliases, special filenames (`README`, `Pipfile`, dotfiles),
+and example/backup suffixes are included. Generated lockfiles are excluded.
+The exact inventory is in [`src/support.json`](src/support.json), extracted
+from the pinned engine's `apps/oxfmt/src/core/support.rs`; update it and the
+coverage tests when upgrading Oxfmt.
+
+```ts
+import { supportsPath } from '@octane-xplat/fmt';
+supportsPath('theme.css'); // true
+supportsPath('README'); // true
+supportsPath('pnpm-lock.yaml'); // false
+```
+
+All languages use the same resolved options and ignore sets. Language-specific
+options such as `proseWrap`, `sortPackageJson`, `svelte`, and
+`vueIndentScriptAndStyle` reach Oxfmt. Embedded JS in other languages uses
+Oxfmt's behavior, without Octane fixes. Direct `formatText` calls leave ignore
+selection to the caller via `shouldIgnore`, as before.
+
+Requires Node.js 20.19+ or 22.12+ (matching Oxfmt).
 
 ## Native builds
 

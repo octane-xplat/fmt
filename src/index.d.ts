@@ -61,3 +61,6 @@ export interface Formatter {
 export declare function createFormatter(
 	options: FormatterOptions,
 ): Promise<Formatter>;
+
+/** Whether the pinned Oxfmt engine recognizes this path; plugins may require configuration. */
+export declare function supportsPath(path: string): boolean;

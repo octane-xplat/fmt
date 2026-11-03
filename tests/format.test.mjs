@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { readFile } from 'node:fs/promises'
+import { readFile, mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { supportsPath } from '../src/index.js'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
@@ -132,9 +135,9 @@ test('malformed input returns structured diagnostics', async () => {
 
 test('unsupported extension reports the extension', async () => {
 	const fmt = await engine()
-	const result = await fmt.formatText({ path: 'readme.md', source: '# hi\n' })
+	const result = await fmt.formatText({ path: 'file.unknown', source: '# hi\n' })
 	assert.equal(result.ok, false)
-	assert.match(JSON.stringify(result.diagnostics), /md|extension/i)
+	assert.match(JSON.stringify(result.diagnostics), /type|extension/i)
 })
 
 test('ASI guard gets a blank line above the `;` line', async () => {
@@ -247,4 +250,62 @@ test('formatting spawns no child processes', async () => {
 		assert.equal(result.ok, true)
 	}
 	assert.equal(await childCount(), before)
+})
+
+for (const [path, source] of Object.entries({
+ 'a.json': '{"x":1}', 'a.jsonc': '// hello\n{"x":1,}', 'a.json5': '{x:1}',
+ 'a.css': 'a{color:red}', 'a.scss': '$x:red;a{color:$x}', 'a.less': '@x:red;a{color:@x}',
+ 'a.graphql': 'query{hello}', 'a.yaml': 'a: [1,2]', 'Pipfile': '[hello]\na=1',
+ 'README': '# Hello\n\nhello   world', 'a.mdx': '# Hello\n\nhello   world',
+ 'a.html': '<div><span>hello</span></div>', 'a.component.html': '<div>{{ x }}</div>',
+ 'a.vue': '<template><div>hello</div></template>', 'a.hbs': '<div>{{hello}}</div>',
+ 'a.mjml': '<mjml><mj-body></mj-body></mjml>', '.prettierrc': '{"semi":false}',
+ 'a.es6': 'const x=1',
+})) {
+ test(`Oxfmt coverage and stability: ${path}`, async () => {
+  const fmt = await engine()
+  const first = await fmt.formatText({ path, source })
+  assert.equal(first.ok, true, JSON.stringify(first.diagnostics))
+  const second = await fmt.formatText({ path, source: first.code })
+  assert.equal(second.ok, true, JSON.stringify(second.diagnostics))
+  assert.equal(second.code, first.code)
+  assert.equal(second.changed, false)
+ })
+}
+
+test('non-JS options, overrides and caller precedence survive resolution', async () => {
+ const fmt = await createFormatter({ cwd: here, formatOptions: { useTabs: false, tabWidth: 4, proseWrap: 'always', printWidth: 20 } })
+ const result = await fmt.formatText({ path: 'a.css', source: 'a{color:red}' })
+ assert.equal(result.ok, true, JSON.stringify(result.diagnostics))
+ assert.match(result.code, /\n    color: red/)
+ const bad = await fmt.formatText({ path: 'bad.json', source: '{' })
+ assert.equal(bad.ok, false)
+ assert.equal(bad.diagnostics[0].path, 'bad.json')
+ assert.equal(bad.diagnostics[0].stage, 'format')
+})
+
+test('language inventory includes aliases and special paths but excludes lockfiles', () => {
+ for (const path of ['a.4DForm', 'a.JSON-tmLanguage', '.babelrc', 'a.sublime-settings', 'a.wxss', 'a.graphqls', 'a.yaml-tmlanguage', 'a.toml.example', 'a.json.example', 'a.tfstate.backup', 'a.start.frag', 'Jakefile', 'README', 'a.svelte']) assert.equal(supportsPath(path), true, path)
+ for (const path of ['a.unknown', 'package-lock.json', 'pnpm-lock.yaml', 'Cargo.lock', 'bun.lock']) assert.equal(supportsPath(path), false, path)
+})
+test('non-JS per-file overrides, ignores and language options are preserved', async () => {
+ const cwd = await mkdtemp(join(tmpdir(), 'fmt-languages-'))
+ try {
+  await writeFile(join(cwd, '.oxfmtrc.json'), JSON.stringify({ ignorePatterns: ['skip.css'], sortPackageJson: false, overrides: [{ files: ['*.css'], useTabs: false, tabWidth: 4 }] }))
+  await writeFile(join(cwd, 'skip.css'), 'a{color:red}')
+  const fmt = await createFormatter({ cwd })
+  assert.equal(fmt.shouldIgnore(join(cwd, 'skip.css')), true)
+  const result = await fmt.formatText({ path: 'a.css', source: 'a{color:red}' })
+  assert.equal(result.ok, true, JSON.stringify(result.diagnostics))
+  assert.match(result.code, /\n    color/)
+  const caller = await createFormatter({ cwd, formatOptions: { tabWidth: 2 } })
+  assert.match((await caller.formatText({path: 'a.css', source: 'a{color:red}'})).code, /\n  color/)
+  const disabled = await fmt.formatText({ path: 'a.svelte', source: '<p>hello</p>' })
+  assert.equal(disabled.ok, false)
+  const svelte = await createFormatter({ cwd, formatOptions: { svelte: {} } })
+  const enabled = await svelte.formatText({ path: 'a.svelte', source: '<p>hello</p>' })
+  // This package does not install Svelte's optional compiler peer.
+  if (!enabled.ok) assert.match(JSON.stringify(enabled.diagnostics), /svelte\/compiler/)
+  else assert.match(enabled.code, /<p>hello<\/p>/)
+ } finally { await rm(cwd, { recursive: true, force: true }) }
 })

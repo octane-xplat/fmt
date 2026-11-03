@@ -1,0 +1,190 @@
+{
+  "TAILWIND_PARSERS": [
+    "html",
+    "vue",
+    "angular",
+    "glimmer",
+    "svelte"
+  ],
+  "OXFMT_PARSERS": [
+    "html",
+    "vue",
+    "svelte",
+    "markdown",
+    "mdx"
+  ],
+  "SVELTE_PARSERS": [
+    "svelte",
+    "markdown",
+    "mdx"
+  ],
+  "EXCLUDE_FILENAMES": [
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "MODULE.bazel.lock",
+    "bun.lock",
+    "deno.lock",
+    "composer.lock",
+    "Package.resolved",
+    "Pipfile.lock",
+    "flake.lock",
+    "mcmod.info",
+    "Cargo.lock",
+    "Gopkg.lock",
+    "pdm.lock",
+    "poetry.lock",
+    "uv.lock"
+  ],
+  "TOML_FILENAMES": [
+    "Pipfile",
+    "Cargo.toml.orig"
+  ],
+  "JSON_EXTENSIONS": [
+    "json",
+    "4DForm",
+    "4DProject",
+    "avsc",
+    "geojson",
+    "gltf",
+    "har",
+    "ice",
+    "JSON-tmLanguage",
+    "mcmeta",
+    "sarif",
+    "tact",
+    "tfstate",
+    "topojson",
+    "webapp",
+    "webmanifest",
+    "yy",
+    "yyp"
+  ],
+  "JSON_FILENAMES": [
+    ".all-contributorsrc",
+    ".arcconfig",
+    ".auto-changelog",
+    ".c8rc",
+    ".htmlhintrc",
+    ".imgbotconfig",
+    ".nycrc",
+    ".tern-config",
+    ".tern-project",
+    ".watchmanconfig",
+    ".babelrc",
+    ".jscsrc",
+    ".jshintrc",
+    ".jslintrc",
+    ".swcrc"
+  ],
+  "JSONC_EXTENSIONS": [
+    "jsonc",
+    "code-snippets",
+    "code-workspace",
+    "sublime-build",
+    "sublime-color-scheme",
+    "sublime-commands",
+    "sublime-completions",
+    "sublime-keymap",
+    "sublime-macro",
+    "sublime-menu",
+    "sublime-mousemap",
+    "sublime-project",
+    "sublime-settings",
+    "sublime-theme",
+    "sublime-workspace",
+    "sublime_metrics",
+    "sublime_session"
+  ],
+  "GRAPHQL_EXTENSIONS": [
+    "graphql",
+    "gql",
+    "graphqls"
+  ],
+  "CSS_EXTENSIONS": [
+    "css",
+    "wxss",
+    "pcss",
+    "postcss"
+  ],
+  "YAML_RC_FILENAMES": [
+    ".prettierrc",
+    ".stylelintrc",
+    ".lintstagedrc"
+  ],
+  "YAML_FILENAMES": [
+    ".clang-format",
+    ".clang-tidy",
+    ".clangd",
+    ".gemrc",
+    "CITATION.cff",
+    "glide.lock",
+    "pixi.lock"
+  ],
+  "YAML_EXTENSIONS": [
+    "yml",
+    "mir",
+    "reek",
+    "rviz",
+    "sublime-syntax",
+    "syntax",
+    "yaml",
+    "yaml-tmlanguage"
+  ],
+  "HTML_EXTENSIONS": [
+    "html",
+    "hta",
+    "htm",
+    "inc",
+    "xht",
+    "xhtml"
+  ],
+  "HANDLEBARS_EXTENSIONS": [
+    "handlebars",
+    "hbs"
+  ],
+  "MARKDOWN_FILENAMES": [
+    "contents.lr",
+    "README"
+  ],
+  "MARKDOWN_EXTENSIONS": [
+    "md",
+    "livemd",
+    "markdown",
+    "mdown",
+    "mdwn",
+    "mkd",
+    "mkdn",
+    "mkdown",
+    "ronn",
+    "scd",
+    "workbook"
+  ],
+  "ADDITIONAL_JS_EXTENSIONS": [
+    "_js",
+    "bones",
+    "es",
+    "es6",
+    "gs",
+    "jake",
+    "javascript",
+    "jsb",
+    "jscad",
+    "jsfl",
+    "jslib",
+    "jsm",
+    "jspre",
+    "jss",
+    "njs",
+    "pac",
+    "sjs",
+    "ssjs",
+    "xsjs",
+    "xsjslib"
+  ],
+  "SPECIAL_JS_FILENAMES": [
+    "Jakefile",
+    "start.frag",
+    "end.frag"
+  ]
+}

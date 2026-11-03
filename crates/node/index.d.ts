@@ -16,6 +16,7 @@ export declare const __napiBindingTarget: 'native' | 'wasm32-wasi' | 'wasm32-was
 export declare class Formatter {
   /** Whether the engine's ignore sets cover `path`. */
   shouldIgnore(path: string): boolean
+  formatOptionsFor(path: string): any
   formatText(input: FormatInput): Promise<unknown>
 }
 export type JsFormatter = Formatter

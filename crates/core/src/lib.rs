@@ -83,7 +83,10 @@ impl Engine {
             config.format_options.as_ref(),
         )?;
         Ok(Self {
-            cwd: config.cwd.clone(),
+            cwd: config
+                .cwd
+                .canonicalize()
+                .unwrap_or_else(|_| config.cwd.clone()),
             lint,
             format,
         })
@@ -94,6 +97,11 @@ impl Engine {
     #[must_use]
     pub fn should_ignore(&self, path: &Path) -> bool {
         self.lint.should_ignore(path) || self.format.should_ignore(&self.cwd, path)
+    }
+
+    /// Resolved Oxfmt options for the Node API's additional language lanes.
+    pub fn format_options(&self, path: &Path) -> serde_json::Value {
+        serde_json::Value::Object(self.format.options_for(&self.cwd, path).raw)
     }
 
     /// Runs the full pipeline over caller-owned text.

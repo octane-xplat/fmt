@@ -91,6 +91,11 @@ impl JsFormatter {
         self.engine.should_ignore(Path::new(&path))
     }
 
+    #[napi(js_name = "formatOptionsFor")]
+    pub fn format_options_for(&self, path: String) -> serde_json::Value {
+        self.engine.format_options(Path::new(&path))
+    }
+
     #[napi(js_name = "formatText")]
     #[must_use]
     pub fn format_text(&self, input: FormatInput) -> AsyncTask<FormatTask> {

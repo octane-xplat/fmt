@@ -2,8 +2,12 @@
 // Loads the prebuilt native engine for the host platform, a local build under
 // crates/node/ during development, or an explicit OCTANE_FMT_NATIVE path.
 // Formatting never spawns oxlint/oxfmt/node/rustc: the engine runs in-process.
+import { extname } from 'node:path'
+import { format } from 'oxfmt'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+
+export { supportsPath } from './support.js'
 
 const require = createRequire(import.meta.url)
 
@@ -76,5 +80,30 @@ export async function createFormatter(options) {
 	if (!options || typeof options.cwd !== 'string') {
 		throw new TypeError('createFormatter requires { cwd: string }')
 	}
-	return native.createFormatter(options)
+	const formatter = native.createFormatter(options)
+	return {
+		shouldIgnore: (path) => formatter.shouldIgnore(path),
+		async formatText({ path, source }) {
+			if (/^\.(?:[cm]?[jt]s|[jt]sx|tsrx)$/.test(extname(path))) {
+				return formatter.formatText({ path, source })
+			}
+			try {
+				const result = await format(path, source, formatter.formatOptionsFor(path))
+				if (result.errors.length) return { ok: false, diagnostics: result.errors.map((error) => ({
+					path, stage: 'format', code: 'OXFMT_FORMAT', message: error.message,
+					...(error.labels?.[0] ? location(source, error.labels[0].start) : {}),
+				})) }
+				return { ok: true, code: result.code, changed: result.code !== source }
+			} catch (error) {
+				return { ok: false, diagnostics: [{ path, stage: 'format', code: 'OXFMT_FORMAT', message: error.message }] }
+			}
+		},
+	}
+}
+
+// Oxfmt labels use UTF-8 byte offsets; public diagnostics use authored line/column.
+function location(source, offset) {
+	const prefix = Buffer.from(source).subarray(0, offset).toString()
+	const lines = prefix.split('\n')
+	return { line: lines.length, column: [...lines.at(-1)].length + 1 }
 }
