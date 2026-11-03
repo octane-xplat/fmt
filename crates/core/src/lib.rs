@@ -100,6 +100,7 @@ impl Engine {
     }
 
     /// Resolved Oxfmt options for the Node API's additional language lanes.
+    #[must_use]
     pub fn format_options(&self, path: &Path) -> serde_json::Value {
         serde_json::Value::Object(self.format.options_for(&self.cwd, path).raw)
     }

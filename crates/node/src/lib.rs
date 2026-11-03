@@ -92,6 +92,7 @@ impl JsFormatter {
     }
 
     #[napi(js_name = "formatOptionsFor")]
+    #[must_use]
     pub fn format_options_for(&self, path: String) -> serde_json::Value {
         self.engine.format_options(Path::new(&path))
     }
