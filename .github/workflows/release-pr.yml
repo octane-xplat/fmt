@@ -81,15 +81,6 @@ jobs:
           title: 'chore(release): v${{ steps.version.outputs.version }}'
           commit-message: 'chore(release): v${{ steps.version.outputs.version }}'
           body-path: ${{ runner.temp }}/release-pr-body.md
-          add-paths: |
-            package.json
-            npm/*/package.json
-            Cargo.toml
-            Cargo.lock
-            pnpm-lock.yaml
-            CHANGELOG.md
-            FIXLOG.md
-            .changelog/**/*.md
       - name: Close a stale release PR
         if: steps.version.outputs.should_release == 'false'
         env:
