@@ -4,3 +4,6 @@ target/
 *.tgz
 .pnpm-store/
 coverage/
+
+# Generated release PR body
+.release-notes.md

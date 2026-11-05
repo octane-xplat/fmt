@@ -1,14 +1,89 @@
 name: release
 
 on:
-  push:
-    tags: ['v*']
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    inputs:
+      track:
+        description: Release channel
+        type: choice
+        options: [stable, nightly]
+        default: stable
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.track || (github.event_name == 'schedule' && 'nightly') || 'stable' }}
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  gate:
+    if: >-
+      github.repository == 'octane-xplat/fmt' &&
+      ((github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository) ||
+       (github.event_name != 'workflow_run' && github.ref == 'refs/heads/main'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      publish: ${{ steps.plan.outputs.publish }}
+      sha: ${{ steps.plan.outputs.sha }}
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      dist_tag: ${{ steps.plan.outputs.dist_tag }}
+    steps:
+      - name: Find the qualified revision
+        id: ci
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_SHA: ${{ github.event.workflow_run.head_sha }}
+          TRACK: ${{ inputs.track || (github.event_name == 'schedule' && 'nightly') || 'stable' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$EVENT_SHA" ]; then
+            sha="$EVENT_SHA"
+          else
+            query="repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=1"
+            sha="$(gh api "$query" --jq '.workflow_runs[0].head_sha // empty')"
+            if [ "$TRACK" = stable ] && [ "$sha" != "$GITHUB_SHA" ]; then
+              echo '::error::Current main has not passed CI; wait for CI before dispatching stable.'
+              exit 1
+            fi
+          fi
+          test -n "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ci.outputs.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Resolve publication or resume
+        id: plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.ci.outputs.sha }}
+          TRACK: ${{ inputs.track || (github.event_name == 'schedule' && 'nightly') || 'stable' }}
+        run: node scripts/release.mjs gate "$TRACK" "$SHA" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: gate
+    if: needs.gate.outputs.publish == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -24,6 +99,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
       - uses: dtolnay/rust-toolchain@1.99.1
         with:
           targets: ${{ matrix.target }}
@@ -44,6 +121,11 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Align nightly versions after installing build tools
+        if: needs.gate.outputs.dist_tag == 'nightly'
+        env:
+          VERSION: ${{ needs.gate.outputs.version }}
+        run: node scripts/release.mjs bump "$VERSION"
       # aarch64 musl has no apt cross-gcc — cargo-zigbuild supplies it.
       - run: pnpm exec napi build --release -p octane-fmt-node --target ${{ matrix.target }} ${{ matrix.zig && '--cross-compile' || '' }}
       - name: stage platform package
@@ -54,39 +136,85 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: fmt-${{ matrix.pkg }}
-          # Upload the npm/ subtree — only this job's pkg dir exists here,
-          # so the artifact carries npm/<pkg>/… paths for the merge below.
-          path: npm/
+          path: npm/${{ matrix.pkg }}/*.node
+          if-no-files-found: error
 
   publish:
-    needs: build
+    needs: [gate, build]
     runs-on: ubuntu-latest
     permissions:
-      id-token: write # npm trusted publishing
-      contents: read
+      id-token: write
+      contents: write
+      actions: write
+    env:
+      VERSION: ${{ needs.gate.outputs.version }}
+      TAG: ${{ needs.gate.outputs.tag }}
+      DIST_TAG: ${{ needs.gate.outputs.dist_tag }}
+      TESTED_SHA: ${{ needs.gate.outputs.sha }}
     steps:
+      - name: Require release credential
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: test -n "$RELEASE_TOKEN" || { echo '::error::Configure RELEASE_TOKEN; see RELEASING.md'; exit 1; }
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+        with:
+          ref: ${{ env.TESTED_SHA }}
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: pnpm
+          node-version: 24
           registry-url: https://registry.npmjs.org
+      - name: Align nightly manifests
+        if: env.DIST_TAG == 'nightly'
+        run: node scripts/release.mjs bump "$VERSION"
       - uses: actions/download-artifact@v4
         with:
           pattern: fmt-*
-          path: npm
-          merge-multiple: true
-      - name: tag must match package version
-        run: |
-          test "v$(node -p 'require("./package.json").version')" = "${{ github.ref_name }}" || \
-            { echo "tag ${{ github.ref_name }} != package version $(node -p 'require("./package.json").version')"; exit 1; }
-      # Artifacts land merged at npm/<pkg>/… because each uploaded its dir.
-      - run: pnpm install --frozen-lockfile
-      - name: publish platform packages
+          path: artifacts
+      - name: Stage all native binaries
         run: |
           for dir in npm/*/; do
-            (cd "$dir" && pnpm publish --access public --provenance --no-git-checks)
+            platform="$(basename "$dir")"
+            cp "artifacts/fmt-$platform/octane-fmt.$platform.node" "$dir"
           done
-      - name: publish main package
-        run: pnpm publish --access public --provenance --no-git-checks
+      - name: Tag the qualified stable revision
+        if: env.DIST_TAG != 'nightly'
+        run: |
+          set -euo pipefail
+          test "$(node -p 'JSON.parse(require("fs").readFileSync("package.json")).version')" = "$VERSION"
+          if git rev-parse --verify "$TAG" >/dev/null 2>&1; then
+            test "$(git rev-parse "$TAG^{commit}")" = "$TESTED_SHA"
+          else
+            git tag "$TAG" "$TESTED_SHA"
+            git push origin "$TAG"
+          fi
+      - name: Publish platform packages, then main (skip existing versions)
+        run: node scripts/release.mjs publish "$DIST_TAG"
+      - name: Complete stable release
+        if: env.DIST_TAG != 'nightly'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/release.mjs preview "$VERSION" > "$RUNNER_TEMP/notes.md"
+          # The PR has consumed pending notes; link the committed logs.
+          printf '\n[Changelog](https://github.com/%s/blob/%s/CHANGELOG.md) · [Fixlog](https://github.com/%s/blob/%s/FIXLOG.md)\n' "$GITHUB_REPOSITORY" "$TAG" "$GITHUB_REPOSITORY" "$TAG" >> "$RUNNER_TEMP/notes.md"
+          args=()
+          if [ "$DIST_TAG" = next ]; then args+=(--prerelease); fi
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" "${args[@]}"
+          gh workflow run release-pr.yml --ref main
+      - name: Update nightly prerelease
+        if: env.DIST_TAG == 'nightly'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          git tag -f nightly "$TESTED_SHA"
+          git push --force origin refs/tags/nightly
+          # shellcheck disable=SC2016
+          printf 'Nightly of %s, published as %s. Install with `pnpm add @octane-xplat/fmt@nightly`.\n' "$TESTED_SHA" "$VERSION" > "$RUNNER_TEMP/notes.md"
+          if gh release view nightly >/dev/null 2>&1; then
+            gh release edit nightly --title nightly --prerelease --notes-file "$RUNNER_TEMP/notes.md"
+          else
+            gh release create nightly --verify-tag --title nightly --prerelease --notes-file "$RUNNER_TEMP/notes.md"
+          fi

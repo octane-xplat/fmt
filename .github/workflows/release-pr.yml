@@ -1,0 +1,101 @@
+name: Release PR
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version override (blank keeps the current override; auto infers from commits)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-pr
+  cancel-in-progress: true
+
+jobs:
+  maintain:
+    if: github.repository == 'octane-xplat/fmt'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require release credential
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: test -n "$RELEASE_TOKEN" || { echo '::error::Configure RELEASE_TOKEN; see RELEASING.md'; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+      - name: Resolve version
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          INPUT_VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pending="$(node scripts/release.mjs gate stable "$(git rev-parse HEAD)")"
+          if printf '%s\n' "$pending" | grep -q '^publish=true$'; then
+            echo '::notice::A merged release awaits publication.'
+            exit 0
+          fi
+          body="$(gh pr list --head release/lockstep --base main --state open --json body --jq '.[0].body // ""')"
+          override="$INPUT_VERSION"
+          if [ -z "$override" ]; then
+            override="$(printf '%s\n' "$body" | sed -n 's/^<!-- release-version: \(.*\) -->$/\1/p')"
+          fi
+          if [ "$override" = auto ]; then override=''; fi
+          node scripts/release.mjs version "$override" >> "$GITHUB_OUTPUT"
+          echo "override=$override" >> "$GITHUB_OUTPUT"
+      - name: Prepare version and release notes
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          OVERRIDE: ${{ steps.version.outputs.override }}
+        run: |
+          node scripts/release.mjs bump "$VERSION"
+          pnpm install --lockfile-only --ignore-scripts
+          node scripts/release.mjs prepare "$VERSION"
+          {
+            printf '<!-- release-version: %s -->\n\n' "$OVERRIDE"
+            printf 'Mark this draft ready, review the CI results, then merge to publish **%s**.\n\n' "$VERSION"
+            cat .release-notes.md
+          } > "$RUNNER_TEMP/release-pr-body.md"
+      - name: Maintain draft release PR
+        if: steps.version.outputs.should_release == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          branch: release/lockstep
+          base: main
+          draft: true
+          title: 'chore(release): v${{ steps.version.outputs.version }}'
+          commit-message: 'chore(release): v${{ steps.version.outputs.version }}'
+          body-path: ${{ runner.temp }}/release-pr-body.md
+          add-paths: |
+            package.json
+            npm/*/package.json
+            Cargo.toml
+            Cargo.lock
+            pnpm-lock.yaml
+            CHANGELOG.md
+            FIXLOG.md
+            .changelog/**/*.md
+      - name: Close a stale release PR
+        if: steps.version.outputs.should_release == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          number="$(gh pr list --head release/lockstep --base main --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$number" ]; then
+            gh pr close "$number" --comment 'No qualifying changes remain for a release.'
+          fi
