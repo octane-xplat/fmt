@@ -2,8 +2,8 @@
 
 Releases follow the same model as `octane-xplat/octane-xplat`: a maintained
 draft release PR, Conventional Commit version inference, stable publication
-from green main CI, and a daily nightly channel. This repository keeps pnpm,
-its eight native build targets, and one shared npm/Rust version.
+from green main CI. This repository keeps pnpm, its eight native build targets,
+and one shared npm/Rust version.
 
 ## Cut a stable release
 
@@ -58,29 +58,17 @@ Empty documents now format successfully instead of returning an error.
 
 Preview notes with `pnpm release:preview 0.2.0`. The release PR moves pending
 notes into `CHANGELOG.md` and `FIXLOG.md`, preserving published history.
-Nightlies leave pending notes and logs untouched.
 
-## Nightlies and retries
+## Retry a release
 
-At 08:00 UTC daily, the workflow selects the latest successful push CI run on
-main. It publishes only when package files changed since the published nightly.
-Versions use `0.0.0-nightly.g<sha7>` and the npm `nightly` dist-tag; `latest`
-stays unchanged. Versions change only in the publication checkout, and the
-moving `nightly` Git tag and GitHub prerelease update after npm succeeds.
-
-```sh
-pnpm add @octane-xplat/fmt@nightly
-gh workflow run release.yml -f track=nightly
-```
-
-For a failed stable or nightly publication, use **Re-run failed jobs**. Missing
+For a failed publication, use **Re-run failed jobs**. Missing
 packages are packed before any upload and exact versions already on npm are
 skipped. A subsequent green main CI run also resumes an incomplete stable
 release from its original tag, even if main advanced. Manual stable dispatch
 requires current main to have passed CI:
 
 ```sh
-gh workflow run release.yml -f track=stable
+gh workflow run release.yml
 ```
 
 Historical tags created before this automation are treated as completed legacy

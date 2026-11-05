@@ -111,7 +111,7 @@ Development: `pnpm build` compiles the host binary under `crates/node/`.
 Releases follow the [release PR workflow](RELEASING.md): Conventional Commits
 prepare a draft version PR; merging it publishes after main CI passes. CI
 builds all eight targets and publishes the `fmt-<platform>` packages before
-the main package. A daily nightly channel publishes changed, CI-tested code.
+the main package.
 `pnpm test` runs the Node suite; `pnpm test:packed` packs and exercises the
 artifact in a clean consumer. `cargo fmt --check`, `cargo clippy
 -- -D warnings`, and `cargo test` cover the Rust side.

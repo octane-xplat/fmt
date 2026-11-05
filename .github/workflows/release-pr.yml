@@ -43,7 +43,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pending="$(node scripts/release.mjs gate stable "$(git rev-parse HEAD)")"
+          pending="$(node scripts/release.mjs gate "$(git rev-parse HEAD)")"
           if printf '%s\n' "$pending" | grep -q '^publish=true$'; then
             echo '::notice::A merged release awaits publication.'
             exit 0

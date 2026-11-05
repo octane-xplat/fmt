@@ -79,7 +79,7 @@ test('version inference uses reachable tags, package paths, and largest bump', (
 	assert.equal(nextRelease(root).version, '0.1.2')
 	commit('feat: add syntax')
 	assert.equal(nextRelease(root).version, '0.2.0')
-	git('tag', 'v0.2.0-nightly.1')
+	git('tag', 'v0.2.0-rc.1')
 	assert.equal(nextRelease(root).version, '0.2.0')
 	assert.equal(nextRelease(root, '0.1.1').should_release, false)
 	assert.equal(nextRelease(root, '0.3.0-rc.1').version, '0.3.0-rc.1')
@@ -92,24 +92,24 @@ test('version validation rejects malformed and injectable overrides', () => {
 	for (const value of ['v1.2.3', '1.2', '01.2.3', '1.2.3-01', '1.2.3\npublish=true', '1.2.3 ']) {
 		assert.throws(() => validVersion(value))
 	}
-	assert.equal(validVersion('0.0.0-nightly.g012abcd'), '0.0.0-nightly.g012abcd')
+	assert.equal(validVersion('0.2.0-rc.1'), '0.2.0-rc.1')
 })
 
 test('bump aligns npm, optional dependencies, Rust workspace and local lock entries', (t) => {
 	const { root } = repository(t)
-	bump(root, '0.0.0-nightly.g012abcd')
+	bump(root, '0.2.0-rc.1')
 	for (const path of ['package.json', 'npm/darwin-arm64/package.json']) {
-		assert.equal(JSON.parse(readFileSync(join(root, path))).version, '0.0.0-nightly.g012abcd')
+		assert.equal(JSON.parse(readFileSync(join(root, path))).version, '0.2.0-rc.1')
 	}
 	assert.equal(
 		JSON.parse(readFileSync(join(root, 'package.json'))).optionalDependencies[
 			'@octane-xplat/fmt-darwin-arm64'
 		],
-		'0.0.0-nightly.g012abcd',
+		'0.2.0-rc.1',
 	)
-	assert.match(readFileSync(join(root, 'Cargo.toml'), 'utf8'), /version = "0.0.0-nightly.g012abcd"/)
+	assert.match(readFileSync(join(root, 'Cargo.toml'), 'utf8'), /version = "0.2.0-rc.1"/)
 	const lock = readFileSync(join(root, 'Cargo.lock'), 'utf8')
-	assert.equal(lock.match(/version = "0.0.0-nightly.g012abcd"/g).length, 2)
+	assert.equal(lock.match(/version = "0.2.0-rc.1"/g).length, 2)
 	assert.match(lock, /name = "other"\nversion = "0.1.1"/)
 })
 
@@ -131,34 +131,16 @@ test('release notes preview is read-only; preparation consumes notes and preserv
 test('stable gate skips historical tags and completed releases, resumes exact tagged revision', (t) => {
 	const { root, git, write, commit } = repository(t)
 	const legacy = git('rev-parse', 'HEAD')
-	assert.equal(gate(root, 'stable', legacy, { releaseExists: () => false }).publish, false)
+	assert.equal(gate(root, legacy, { releaseExists: () => false }).publish, false)
 	mkdirSync(join(root, 'scripts'))
 	write('scripts/release.mjs', '// release automation')
 	bump(root, '0.1.2')
 	const release = commit('chore(release): v0.1.2')
-	assert.equal(gate(root, 'stable', release, { releaseExists: () => false }).sha, release)
+	assert.equal(gate(root, release, { releaseExists: () => false }).sha, release)
 	git('tag', 'v0.1.2')
 	const newer = commit('fix: another change')
-	assert.equal(gate(root, 'stable', newer, { releaseExists: () => false }).sha, release)
-	assert.equal(gate(root, 'stable', newer, { releaseExists: () => true }).publish, false)
-})
-
-test('nightly gate skips unchanged or newer published revisions and detects package changes', (t) => {
-	const { root, git, commit } = repository(t)
-	const old = git('rev-parse', 'HEAD')
-	const publishedNightly = () => `0.0.0-nightly.g${old.slice(0, 7)}`
-	assert.equal(gate(root, 'nightly', old, { publishedNightly }).publish, false)
-	const docs = commit('docs: update instructions', 'README.md')
-	assert.equal(gate(root, 'nightly', docs, { publishedNightly }).publish, false)
-	const next = commit('fix: format syntax')
-	const decision = gate(root, 'nightly', next, { publishedNightly })
-	assert.equal(decision.publish, true)
-	assert.equal(decision.version, `0.0.0-nightly.g${next.slice(0, 7)}`)
-	assert.equal(decision.dist_tag, 'nightly')
-	assert.equal(
-		gate(root, 'nightly', old, { publishedNightly: () => decision.version }).publish,
-		false,
-	)
+	assert.equal(gate(root, newer, { releaseExists: () => false }).sha, release)
+	assert.equal(gate(root, newer, { releaseExists: () => true }).publish, false)
 })
 
 test('publisher packs all missing packages first and resumes without reuploading engines', (t) => {

@@ -211,7 +211,7 @@ export function registryVersion(name, version) {
 }
 
 export function publish(root, tag) {
-	assert.ok(['latest', 'nightly', 'next'].includes(tag), 'unsupported dist-tag')
+	assert.ok(['latest', 'next'].includes(tag), 'unsupported dist-tag')
 	const all = packages(root)
 	const version = validVersion(all.at(-1).manifest.version)
 	assert.equal(version.includes('-'), tag !== 'latest', 'prereleases must not update latest')
@@ -242,77 +242,38 @@ export function publish(root, tag) {
 	}
 }
 
-export function gate(
-	root,
-	track,
-	sha,
-	{
-		releaseExists = githubReleaseExists,
-		publishedNightly = () => registryVersion('@octane-xplat/fmt', 'nightly'),
-	} = {},
-) {
-	assert.ok(['stable', 'nightly'].includes(track))
+export function gate(root, sha, { releaseExists = githubReleaseExists } = {}) {
 	assert.match(sha, /^[a-f0-9]{40}$/)
 	git(root, 'merge-base', '--is-ancestor', sha, 'origin/main')
-	if (track === 'stable') {
-		const version = json(join(root, 'package.json')).version
-		validVersion(version)
-		const tag = `v${version}`
-		if (releaseExists(tag)) {
-			return { publish: false }
-		}
-
-		const tagged = git(root, 'tag', '--list', tag)
-		// Tags predating this automation were published manually without GitHub Releases.
-		if (
-			tagged &&
-			spawnSync('git', ['cat-file', '-e', `${tag}:scripts/release.mjs`], { cwd: root }).status !== 0
-		) {
-			return { publish: false }
-		}
-
-		// An existing tag marks a qualified partial publication. Resume that exact revision.
-		return {
-			publish: true,
-			version,
-			tag,
-			sha: tagged ? git(root, 'rev-parse', `${tag}^{commit}`) : sha,
-			dist_tag: version.includes('-') ? 'next' : 'latest',
-		}
+	const version = json(join(root, 'package.json')).version
+	validVersion(version)
+	const tag = `v${version}`
+	if (releaseExists(tag)) {
+		return { publish: false }
 	}
-	const previous = publishedNightly()
-	const match = /^0\.0\.0-nightly\.g([a-f0-9]{7,40})$/.exec(previous ?? '')
-	if (match) {
-		const known = spawnSync('git', ['rev-parse', '--verify', `${match[1]}^{commit}`], {
-			cwd: root,
-			encoding: 'utf8',
-		})
 
-		if (known.status === 0) {
-			const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', sha, known.stdout.trim()], {
-				cwd: root,
-			})
-
-			if (
-				ancestor.status === 0 ||
-				!git(root, 'diff', '--name-only', known.stdout.trim(), sha, '--', ...releasePaths)
-			) {
-				return { publish: false }
-			}
-		}
+	const tagged = git(root, 'tag', '--list', tag)
+	// Tags predating this automation were published manually without GitHub Releases.
+	if (
+		tagged &&
+		spawnSync('git', ['cat-file', '-e', `${tag}:scripts/release.mjs`], { cwd: root }).status !== 0
+	) {
+		return { publish: false }
 	}
+
+	// An existing tag marks a qualified partial publication. Resume that exact revision.
 	return {
 		publish: true,
-		version: `0.0.0-nightly.g${sha.slice(0, 7)}`,
-		tag: 'nightly',
-		sha,
-		dist_tag: 'nightly',
+		version,
+		tag,
+		sha: tagged ? git(root, 'rev-parse', `${tag}^{commit}`) : sha,
+		dist_tag: version.includes('-') ? 'next' : 'latest',
 	}
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
 	try {
-		const [command, arg, sha] = process.argv.slice(2)
+		const [command, arg] = process.argv.slice(2)
 		const root = process.cwd()
 		let result
 		if (command === 'version') {
@@ -326,10 +287,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
 		} else if (command === 'publish') {
 			publish(root, arg)
 		} else if (command === 'gate') {
-			result = gate(root, arg, sha)
+			result = gate(root, arg)
 		} else {
 			throw new Error(
-				'usage: release.mjs version [override] | bump|prepare|preview <version> | publish <dist-tag> | gate <track> <sha>',
+				'usage: release.mjs version [override] | bump|prepare|preview <version> | publish <dist-tag> | gate <sha>',
 			)
 		}
 
