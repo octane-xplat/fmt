@@ -855,7 +855,7 @@ dependencies = [
 
 [[package]]
 name = "octane-fmt-core"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "globset",
  "ignore",
@@ -876,7 +876,7 @@ dependencies = [
 
 [[package]]
 name = "octane-fmt-node"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "napi",
  "napi-build",
