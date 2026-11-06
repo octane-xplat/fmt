@@ -64,6 +64,74 @@ fn tsrx_formats_and_adds_blank_line_before_render() {
 }
 
 #[test]
+fn declaration_clusters_get_surrounding_blank_lines() {
+    let directory = std::env::temp_dir().join("octane-fmt-core-test-clusters");
+    std::fs::create_dir_all(&directory).unwrap();
+    let engine = engine(&directory);
+
+    // Directives, imports, exports, and declarations each cluster; runs get
+    // blank lines around them even when every member is single-line.
+    let source = "'use client'\nimport a from 'a'\nimport { b } from 'b'\nconst x = 1\nfoo()\ninterface I { a: string }\ntype T = I\nexport function g() {}\nexport const e = 2\nexport { x }\nlast()\n";
+    let outcome = engine
+        .format_text(Path::new("src/clusters.ts"), source)
+        .expect("formats");
+    eprintln!("---\n{}---", outcome.code);
+    assert!(
+        outcome.code.contains("'use client'\n\nimport"),
+        "{}",
+        outcome.code
+    );
+    assert!(outcome.code.contains("'b'\n\nconst x"), "{}", outcome.code);
+    assert!(
+        outcome.code.contains("const x = 1\n\nfoo()"),
+        "{}",
+        outcome.code
+    );
+    assert!(
+        outcome.code.contains("foo()\n\ninterface"),
+        "{}",
+        outcome.code
+    );
+    // Export declarations cluster separately from non-exported ones: the
+    // multiline interface still gets its trailing blank, `type` stays with
+    // the declaration run, and the export run is blanked on both sides.
+    assert!(
+        outcome.code.contains("}\n\ntype T = I\n\nexport function"),
+        "{}",
+        outcome.code
+    );
+    assert!(
+        outcome
+            .code
+            .contains("export function g() {}\nexport const e = 2\nexport { x }\n\nlast()"),
+        "{}",
+        outcome.code
+    );
+
+    // Function bodies are containers too.
+    let nested = engine
+        .format_text(
+            Path::new("src/nested.ts"),
+            "function f() {\nconst a = 1\nside()\nreturn a\n}\n",
+        )
+        .expect("formats nested");
+    assert!(
+        nested.code.contains("const a = 1\n\n\tside()"),
+        "{}",
+        nested.code
+    );
+
+    // Idempotent.
+    for outcome in [outcome, nested] {
+        let second = engine
+            .format_text(Path::new("src/again.ts"), &outcome.code)
+            .expect("reformats");
+        assert_eq!(second.code, outcome.code);
+        assert!(!second.changed);
+    }
+}
+
+#[test]
 fn malformed_source_fails_without_output() {
     let directory = std::env::temp_dir().join("octane-fmt-core-test-3");
     std::fs::create_dir_all(&directory).unwrap();

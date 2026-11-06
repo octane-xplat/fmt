@@ -1,6 +1,7 @@
-//! The custom Xplat fix: a blank line after every multiline statement and
-//! before a TSRX code block's implicit render expression. Ported from
-//! `packages/lint/src/spacing-rules.mjs` at octane-xplat commit
+//! The custom Xplat fix: a blank line after every multiline statement, blank
+//! lines around runs of declaration-kind statements, and one before a TSRX
+//! code block's implicit render expression. The multiline/render behavior is
+//! ported from `packages/lint/src/spacing-rules.mjs` at octane-xplat commit
 //! `8295753813e525d6d8ae2fa848e75ab225899abe`; the JS version's own comments
 //! are preserved where the behavior is subtle.
 //!
@@ -10,16 +11,43 @@
 //! ordinary source (typed OXC AST) and TSRX (reconstructed tape), so this
 //! file has one implementation of the gap/ASI/comment rules.
 
-/// A statement's authored UTF-8 byte span.
+/// How a statement groups for the declaration-cluster rule: a blank line is
+/// inserted between two adjacent statements whenever their kinds differ and
+/// at least one of them clusters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StmtKind {
+    /// `import` statements, `import X = require(...)` included.
+    Import,
+    /// `export` statements of every form: `export <declaration>`,
+    /// `export default`, `export {}`, `export *`, `export =`,
+    /// `export as namespace`.
+    Export,
+    /// Non-exported variable, function, class, and TS type/enum/module
+    /// declarations.
+    Declaration,
+    /// `'use client'`-style directive prologue entries.
+    Directive,
+    /// Everything else; does not cluster.
+    Other,
+}
+
+impl StmtKind {
+    fn clusters(self) -> bool {
+        !matches!(self, Self::Other)
+    }
+}
+
+/// A statement's authored UTF-8 byte span and its cluster kind.
 #[derive(Debug, Clone, Copy)]
 pub struct StmtSpan {
     pub start: u32,
     pub end: u32,
+    pub kind: StmtKind,
 }
 
-/// One ordered statement list: `Program`/`BlockStatement`/`StaticBlock`
-/// `body`, `SwitchCase` `consequent`, `TSModuleBlock` `body`, or a TSRX
-/// `JSXCodeBlock` `body` with its `render` boundary.
+/// One ordered statement list: `Program`/`BlockStatement`/`FunctionBody`/
+/// `StaticBlock` `body`, `SwitchCase` `consequent`, `TSModuleBlock` `body`, or
+/// a TSRX `JSXCodeBlock` `body` with its `render` boundary.
 #[derive(Debug, Default)]
 pub struct Container {
     pub statements: Vec<StmtSpan>,
@@ -185,7 +213,11 @@ pub fn find_spacing_violations(source: &str, containers: &[Container]) -> Vec<Sp
                 handle_asi_guard(source, *current, *next, &mut violations);
                 continue;
             }
-            if !is_multiline(*current, source)
+            // Cluster boundary: entering, leaving, or crossing between
+            // clustered kinds gets a blank line even for single-line members.
+            let boundary =
+                current.kind != next.kind && (current.kind.clusters() || next.kind.clusters());
+            if (!is_multiline(*current, source) && !boundary)
                 || has_blank_line_after(source, current.end, next.start)
             {
                 continue;

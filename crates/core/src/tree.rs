@@ -11,7 +11,7 @@ use tsrx_tape_schema::{CoordinateDomain, FlatTape, ParseCompleteness, RecordInde
 
 use crate::{
     diagnostic::{Diagnostic, Stage},
-    spacing::{Container, StmtSpan},
+    spacing::{Container, StmtKind, StmtSpan},
     utf16::Utf16Index,
 };
 
@@ -39,9 +39,39 @@ pub fn collect_containers(path: &Path, source: &str) -> Result<Vec<Container>, V
 // Ordinary JS/TS: typed AST
 // ---------------------------------------------------------------------------
 
+/// The cluster kind of a `Statement`: `export` statements of every form
+/// cluster separately from non-exported declarations, and `import`/
+/// `import =` statements cluster on their own.
+fn stmt_kind(statement: &oxc_ast::ast::Statement) -> StmtKind {
+    use oxc_ast::ast::Statement;
+    match statement {
+        Statement::VariableDeclaration(_)
+        | Statement::FunctionDeclaration(_)
+        | Statement::ClassDeclaration(_)
+        | Statement::TSTypeAliasDeclaration(_)
+        | Statement::TSInterfaceDeclaration(_)
+        | Statement::TSEnumDeclaration(_)
+        | Statement::TSExternalModuleDeclaration(_)
+        | Statement::TSNamespaceDeclaration(_)
+        | Statement::TSGlobalDeclaration(_) => StmtKind::Declaration,
+        Statement::ImportDeclaration(_) | Statement::TSImportEqualsDeclaration(_) => {
+            StmtKind::Import
+        }
+        Statement::ExportDeclaration(_)
+        | Statement::ExportDefaultDeclaration(_)
+        | Statement::ExportAllDeclaration(_)
+        | Statement::ExportNamedDeclaration(_)
+        | Statement::ExportFromDeclaration(_)
+        | Statement::TSExportAssignment(_)
+        | Statement::TSNamespaceExportDeclaration(_) => StmtKind::Export,
+        _ => StmtKind::Other,
+    }
+}
+
 fn collect_ordinary(path: &Path, source: &str) -> Result<Vec<Container>, Vec<Diagnostic>> {
     use oxc_ast::ast::{
-        BlockStatement, Directive, Program, Statement, StaticBlock, SwitchCase, TSModuleBlock,
+        BlockStatement, Directive, FunctionBody, Program, Statement, StaticBlock, SwitchCase,
+        TSModuleBlock,
     };
     use oxc_ast_visit::{Visit, walk};
     use oxc_span::GetSpan;
@@ -55,11 +85,16 @@ fn collect_ordinary(path: &Path, source: &str) -> Result<Vec<Container>, Vec<Dia
             self.containers.push(Container {
                 statements: directives
                     .iter()
-                    .map(Directive::span)
-                    .chain(statements.iter().map(Statement::span))
-                    .map(|span| StmtSpan {
+                    .map(|directive| (directive.span(), StmtKind::Directive))
+                    .chain(
+                        statements
+                            .iter()
+                            .map(|statement| (statement.span(), stmt_kind(statement))),
+                    )
+                    .map(|(span, kind)| StmtSpan {
                         start: span.start,
                         end: span.end,
+                        kind,
                     })
                     .collect(),
                 render_start: None,
@@ -75,6 +110,13 @@ fn collect_ordinary(path: &Path, source: &str) -> Result<Vec<Container>, Vec<Dia
         fn visit_block_statement(&mut self, block: &BlockStatement<'a>) {
             self.push(&block.body, &[]);
             walk::walk_block_statement(self, block);
+        }
+        // `FunctionBody` is a distinct node here (ESTree folds it into
+        // `BlockStatement`, which the JS visitor covered); it carries the
+        // function's directive prologue too.
+        fn visit_function_body(&mut self, body: &FunctionBody<'a>) {
+            self.push(&body.statements, &body.directives);
+            walk::walk_function_body(self, body);
         }
         fn visit_static_block(&mut self, block: &StaticBlock<'a>) {
             self.push(&block.body, &[]);
@@ -143,12 +185,46 @@ fn statement_list_fields(node_type: &str) -> &'static [&'static str] {
     }
 }
 
+/// The cluster kind of a tape statement node. Mirrors [`stmt_kind`]: every
+/// `export` form clusters separately from non-exported declarations, and an
+/// `ExpressionStatement` carrying a `directive` field is a directive
+/// prologue entry.
+fn tape_stmt_kind(tape: &FlatTape, object: RecordIndex) -> StmtKind {
+    let Some(name) = node_type(tape, object) else {
+        return StmtKind::Other;
+    };
+    match name.as_str() {
+        "VariableDeclaration"
+        | "FunctionDeclaration"
+        | "TSDeclareFunction"
+        | "ClassDeclaration"
+        | "TSTypeAliasDeclaration"
+        | "TSInterfaceDeclaration"
+        | "TSEnumDeclaration"
+        | "TSModuleDeclaration" => StmtKind::Declaration,
+        "ImportDeclaration" | "TSImportEqualsDeclaration" => StmtKind::Import,
+        // The tape flattens OXC's export split into ESTree names:
+        // `export <declaration>` and `export {x}`/`export {x} from` are all
+        // `ExportNamedDeclaration` here.
+        "ExportNamedDeclaration"
+        | "ExportDefaultDeclaration"
+        | "ExportAllDeclaration"
+        | "ExportFromDeclaration"
+        | "TSExportAssignment"
+        | "TSNamespaceExportDeclaration" => StmtKind::Export,
+        "ExpressionStatement" if tape.field_index(object, "directive").is_some() => {
+            StmtKind::Directive
+        }
+        _ => StmtKind::Other,
+    }
+}
+
 /// Tightens a tape span to its non-whitespace bounds. Tape node spans cover
 /// an authored line region, indent and trailing trivia included; the spacing
 /// rules were written against tight statement spans, so the boundary between
 /// two statements must land on real text for the gap rules to see the
 /// separating line break.
-fn trim_span(source: &str, start: u32, end: u32) -> StmtSpan {
+fn trim_span(source: &str, start: u32, end: u32, kind: StmtKind) -> StmtSpan {
     let bytes = source.as_bytes();
     let mut start = start as usize;
     let mut end = (end as usize).min(bytes.len());
@@ -171,6 +247,7 @@ fn trim_span(source: &str, start: u32, end: u32) -> StmtSpan {
     StmtSpan {
         start: u32::try_from(start).unwrap_or(u32::MAX),
         end: u32::try_from(end).unwrap_or(u32::MAX),
+        kind,
     }
 }
 
@@ -275,14 +352,15 @@ fn collect_tsrx(path: &Path, source: &str) -> Result<Vec<Container>, Vec<Diagnos
             let mut statements = Vec::new();
             if let Some(list) = field_list(tape, object, field) {
                 for item in tape.values(list) {
-                    if item.kind() != ValueKind::Object {
+                    let Some(item_object) = item.as_object() else {
                         continue;
-                    }
+                    };
                     if let (Some(start), Some(end)) =
                         (object_start(tape, item), object_end(tape, item))
                         && let (Some(start), Some(end)) = (to_byte(start), to_byte(end))
                     {
-                        statements.push(trim_span(source, start, end));
+                        let kind = tape_stmt_kind(tape, item_object);
+                        statements.push(trim_span(source, start, end, kind));
                     }
                 }
             }
