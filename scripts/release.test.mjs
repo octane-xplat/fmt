@@ -41,6 +41,11 @@ function repository(t) {
 		'npm/darwin-arm64/package.json',
 		JSON.stringify({ name: '@octane-xplat/fmt-darwin-arm64', version: '0.1.1' }),
 	)
+	mkdirSync(join(root, 'crates/node'), { recursive: true })
+	write(
+		'crates/node/index.js',
+		"if (bindingPackageVersion !== '0.1.1') { throw new Error(`Native binding package version mismatch, expected 0.1.1 but got ${bindingPackageVersion}.`) }\n",
+	)
 	write('Cargo.toml', '[workspace.package]\nversion = "0.1.1"\n')
 	write(
 		'Cargo.lock',
@@ -95,7 +100,7 @@ test('version validation rejects malformed and injectable overrides', () => {
 	assert.equal(validVersion('0.2.0-rc.1'), '0.2.0-rc.1')
 })
 
-test('bump aligns npm, optional dependencies, Rust workspace and local lock entries', (t) => {
+test('bump aligns npm, optional dependencies, Rust workspace, lock entries and generated loader', (t) => {
 	const { root } = repository(t)
 	bump(root, '0.2.0-rc.1')
 	for (const path of ['package.json', 'npm/darwin-arm64/package.json']) {
@@ -111,6 +116,9 @@ test('bump aligns npm, optional dependencies, Rust workspace and local lock entr
 	const lock = readFileSync(join(root, 'Cargo.lock'), 'utf8')
 	assert.equal(lock.match(/version = "0.2.0-rc.1"/g).length, 2)
 	assert.match(lock, /name = "other"\nversion = "0.1.1"/)
+	const loader = readFileSync(join(root, 'crates/node/index.js'), 'utf8')
+	assert.match(loader, /bindingPackageVersion !== '0\.2\.0-rc\.1'/)
+	assert.match(loader, /expected 0\.2\.0-rc\.1 but got/)
 })
 
 test('release notes preview is read-only; preparation consumes notes and preserves history', (t) => {

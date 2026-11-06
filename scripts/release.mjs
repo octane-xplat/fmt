@@ -122,6 +122,15 @@ export function bump(root, version) {
 		lock,
 		read(lock).replace(/(name = "octane-fmt-(?:core|node)"\nversion = ")[^"]+/g, `$1${version}`),
 	)
+	const loader = join(root, 'crates/node/index.js')
+	if (existsSync(loader)) {
+		const body = read(loader)
+		const stale = new Set(
+			[...body.matchAll(/bindingPackageVersion !== '([^']+)'/g)].map((match) => match[1]),
+		)
+		assert.equal(stale.size, 1, 'crates/node/index.js: generated version checks not found')
+		writeFileSync(loader, body.replaceAll([...stale][0], version))
+	}
 }
 
 export function notes(root, version, prepare = false) {
