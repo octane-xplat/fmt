@@ -176,31 +176,6 @@ importers:
       typescript:
         specifier: ^5.9.0
         version: 5.9.3
-    optionalDependencies:
-      '@octane-xplat/fmt-darwin-arm64':
-        specifier: 0.2.0
-        version: 0.2.0
-      '@octane-xplat/fmt-darwin-x64':
-        specifier: 0.2.0
-        version: 0.2.0
-      '@octane-xplat/fmt-linux-arm64-gnu':
-        specifier: 0.2.0
-        version: 0.2.0
-      '@octane-xplat/fmt-linux-arm64-musl':
-        specifier: 0.2.0
-        version: 0.2.0
-      '@octane-xplat/fmt-linux-x64-gnu':
-        specifier: 0.2.0
-        version: 0.2.0
-      '@octane-xplat/fmt-linux-x64-musl':
-        specifier: 0.2.0
-        version: 0.2.0
-      '@octane-xplat/fmt-win32-arm64':
-        specifier: 0.2.0
-        version: 0.2.0
-      '@octane-xplat/fmt-win32-x64':
-        specifier: 0.2.0
-        version: 0.2.0
 
 packages:
 
@@ -715,50 +690,6 @@ packages:
   '@napi-rs/wasm-tools@1.1.0':
     resolution: {integrity: sha512-VjHyKEqXAwYZK+HY7iJctYvRm3TFEbaQxeZwvAG1QRkoo1a39phMY8J6x9tUEqJI03W6MysB8F2jacI6wvcx+w==}
     engines: {node: '>= 12.22.0'}
-
-  '@octane-xplat/fmt-darwin-arm64@0.2.0':
-    resolution: {integrity: sha512-OKuAnUm91LYKhsd5BTh5eKY+2YC0MvfVGWlQhLfRcj6hzDCpcHPpTvWsLD0hJkHJpeouiwIQIGYpanH5HqOZsg==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@octane-xplat/fmt-darwin-x64@0.2.0':
-    resolution: {integrity: sha512-X3nAoj5ww8NgTdhYbRLZa98FIRckI9KeoE61K89psqk4vr29l39bcywzROyGy6tdHD8XzOH/rdMWvUK3DORe8A==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@octane-xplat/fmt-linux-arm64-gnu@0.2.0':
-    resolution: {integrity: sha512-atpBb0bR8LCpSYr75TVXuRo+10MiXiSnFfssX/ET8GeW4UdvtTX3S20IFXnrqe8lrU+H/pr0oePejCG46VMW2Q==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
-
-  '@octane-xplat/fmt-linux-arm64-musl@0.2.0':
-    resolution: {integrity: sha512-6EXD9hhLWKJZ2DmvoetBZiLCQ0tf4j46Y8wZQA+f66BoD21Y3slioYUwmFSD1yzBa/wY08hZO36GLUUhTMt8uQ==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [musl]
-
-  '@octane-xplat/fmt-linux-x64-gnu@0.2.0':
-    resolution: {integrity: sha512-rbeyTC/gjA8++KtLk6eGv4vlms7W1xihHAsJiwfDS7zYYYcnRPfK3sJ7zi+6lB93oTwouEexCOhneuzHvnma2g==}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
-  '@octane-xplat/fmt-linux-x64-musl@0.2.0':
-    resolution: {integrity: sha512-4rUdhIQz8dOC0FGgLhKfCki/tq1+gPmaMMwX2aL6qdDfGZN/e0DPFbusKOtCcFISo61F07MvJ/FkmEvTXk0wlg==}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
-
-  '@octane-xplat/fmt-win32-arm64@0.2.0':
-    resolution: {integrity: sha512-Fh8w5bPYyNGg8KHg3TLneNdtZartYyQH35rqjtkkBoNk8Cl1F/h0PmOe3AJpq59jN4MsA4X8ihFzY5GjTTF5kA==}
-    cpu: [arm64]
-    os: [win32]
-
-  '@octane-xplat/fmt-win32-x64@0.2.0':
-    resolution: {integrity: sha512-uct5+sMC81dkWfWuE7RcenMZ2LRL+OL/vUhnkpM3UK4L1SK/dVrB+W0opMm5YUe3JRCmbX0+CbVKxpsjmVgdwA==}
-    cpu: [x64]
-    os: [win32]
 
   '@octokit/auth-token@6.0.0':
     resolution: {integrity: sha512-P4YJBPdPSpWTQ1NU4XYdvHvXJJDxM6YwpS0FZHRgP7YFkdVxsWcpWGy/NVqlAA7PcPCnMacXlRm1y2PFZRWL/w==}
@@ -1441,30 +1372,6 @@ snapshots:
       '@napi-rs/wasm-tools-win32-arm64-msvc': 1.1.0
       '@napi-rs/wasm-tools-win32-ia32-msvc': 1.1.0
       '@napi-rs/wasm-tools-win32-x64-msvc': 1.1.0
-
-  '@octane-xplat/fmt-darwin-arm64@0.2.0':
-    optional: true
-
-  '@octane-xplat/fmt-darwin-x64@0.2.0':
-    optional: true
-
-  '@octane-xplat/fmt-linux-arm64-gnu@0.2.0':
-    optional: true
-
-  '@octane-xplat/fmt-linux-arm64-musl@0.2.0':
-    optional: true
-
-  '@octane-xplat/fmt-linux-x64-gnu@0.2.0':
-    optional: true
-
-  '@octane-xplat/fmt-linux-x64-musl@0.2.0':
-    optional: true
-
-  '@octane-xplat/fmt-win32-arm64@0.2.0':
-    optional: true
-
-  '@octane-xplat/fmt-win32-x64@0.2.0':
-    optional: true
 
   '@octokit/auth-token@6.0.0': {}
 
